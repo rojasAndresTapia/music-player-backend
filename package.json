@@ -1,0 +1,31 @@
+{
+  "name": "music-backend",
+  "version": "1.0.0",
+  "description": "Express.js backend API for streaming music from AWS S3 with signed URLs and image proxy",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "music",
+    "streaming",
+    "aws",
+    "s3",
+    "express",
+    "api",
+    "backend"
+  ],
+  "author": "Andres Rojas",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0"
+  }
+}

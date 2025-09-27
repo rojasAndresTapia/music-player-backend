@@ -1,0 +1,11 @@
+# Copy this file to .env and fill in your actual AWS credentials
+
+# AWS Configuration
+# Get these from your AWS Console: https://console.aws.amazon.com/iam/home#/security_credentials
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
+AWS_REGION=your_aws_region_here
+AWS_BUCKET_NAME=your_s3_bucket_name_here
+
+# Server Configuration
+PORT=4000
