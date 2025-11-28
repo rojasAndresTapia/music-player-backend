@@ -22,6 +22,17 @@ const app = express();
 // Enable CORS for frontend integration
 app.use(cors());
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from ${req.ip}`);
+  next();
+});
+
+// Simple test endpoint
+app.get('/test', (req, res) => {
+  res.json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+});
+
 // Configure AWS S3 client
 const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
@@ -378,8 +389,9 @@ app.get("/song", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`También disponible en http://192.168.1.159:${PORT}`);
 });
