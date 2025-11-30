@@ -46,15 +46,36 @@ app.get("/albums", async (req, res) => {
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
       Prefix: "albums/", // Only look in the albums folder
+      MaxKeys: 1000, // Maximum keys per page
     };
-
-    const data = await s3.listObjectsV2(params).promise();
 
     // Organizar resultados en estructura: artista > album > canciones
     const library = {};
     const folderMappings = {}; // Store original folder names
+    
+    // Handle pagination - fetch all pages
+    let continuationToken = undefined;
+    let allContents = [];
+    
+    do {
+      const requestParams = { ...params };
+      if (continuationToken) {
+        requestParams.ContinuationToken = continuationToken;
+      }
+      
+      const data = await s3.listObjectsV2(requestParams).promise();
+      
+      if (data.Contents) {
+        allContents = allContents.concat(data.Contents);
+      }
+      
+      continuationToken = data.IsTruncated ? data.NextContinuationToken : undefined;
+      console.log(`📦 Fetched ${allContents.length} objects so far...`);
+    } while (continuationToken);
+    
+    console.log(`✅ Total objects fetched: ${allContents.length}`);
 
-    data.Contents.forEach((file) => {
+    allContents.forEach((file) => {
       const parts = file.Key.split("/"); // [albums, Artist - Album, Song.mp3]
       if (parts.length === 3 && parts[0] === "albums") {
         const [, artistAlbum, song] = parts; // Skip the "albums" prefix
@@ -102,6 +123,14 @@ app.get("/albums", async (req, res) => {
         }
       }
     });
+
+    // Count total albums
+    let totalAlbums = 0;
+    Object.keys(library).forEach(artist => {
+      totalAlbums += Object.keys(library[artist]).length;
+    });
+    
+    console.log(`🎵 Found ${Object.keys(library).length} artists with ${totalAlbums} total albums`);
 
     res.json(library);
   } catch (err) {
