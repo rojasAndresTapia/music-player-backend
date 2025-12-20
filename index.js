@@ -360,16 +360,51 @@ app.get("/audio-proxy", async (req, res) => {
       Key: fullKey,
     };
 
-    const audioData = await s3.getObject(audioParams).promise();
+    // Support HTTP Range requests for proper audio streaming
+    const range = req.headers.range;
     
-    // Set appropriate headers for audio streaming
-    res.setHeader('Content-Type', audioData.ContentType || 'audio/mpeg');
-    res.setHeader('Content-Length', audioData.ContentLength);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-    
-    // Send the audio data
-    res.send(audioData.Body);
+    if (range) {
+      // Get file metadata first to determine size
+      const headParams = { ...audioParams };
+      const headData = await s3.headObject(headParams).promise();
+      const fileSize = headData.ContentLength;
+      
+      // Parse range header (e.g., "bytes=0-1023")
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = (end - start) + 1;
+      
+      // Get the requested chunk from S3
+      const getParams = {
+        ...audioParams,
+        Range: `bytes=${start}-${end}`
+      };
+      
+      const audioData = await s3.getObject(getParams).promise();
+      
+      // Set headers for partial content
+      res.status(206); // Partial Content
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Length', chunkSize);
+      res.setHeader('Content-Type', audioData.ContentType || 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      
+      res.send(audioData.Body);
+    } else {
+      // No range request - send full file (for compatibility)
+      const audioData = await s3.getObject(audioParams).promise();
+      
+      // Set appropriate headers for audio streaming
+      res.setHeader('Content-Type', audioData.ContentType || 'audio/mpeg');
+      res.setHeader('Content-Length', audioData.ContentLength);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // Send the audio data
+      res.send(audioData.Body);
+    }
   } catch (err) {
     console.error(err);
     res.status(404).json({ error: "Audio not found" });
