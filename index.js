@@ -46,14 +46,17 @@ app.get("/albums", async (req, res) => {
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
       Prefix: "albums/", // Only look in the albums folder
-      MaxKeys: 1000, // Maximum keys per page
+      MaxKeys: 1000, // Maximum keys per API request/page (not a total limit)
+      // Note: We use pagination below to fetch ALL albums, regardless of total count
     };
 
     // Organizar resultados en estructura: artista > album > canciones
     const library = {};
     const folderMappings = {}; // Store original folder names
     
-    // Handle pagination - fetch all pages
+    // Handle pagination - fetch ALL pages until all albums are retrieved
+    // This loop continues until AWS S3 returns IsTruncated: false
+    // Example: 1500 albums = 2 requests (1000 + 500), 2500 albums = 3 requests (1000 + 1000 + 500)
     let continuationToken = undefined;
     let allContents = [];
     
@@ -69,6 +72,8 @@ app.get("/albums", async (req, res) => {
         allContents = allContents.concat(data.Contents);
       }
       
+      // If there are more results, AWS provides NextContinuationToken
+      // We continue looping until IsTruncated is false (no more pages)
       continuationToken = data.IsTruncated ? data.NextContinuationToken : undefined;
       console.log(`📦 Fetched ${allContents.length} objects so far...`);
     } while (continuationToken);
@@ -158,12 +163,15 @@ const getFolderMappings = async () => {
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
       Prefix: "albums/",
-      MaxKeys: 1000, // Maximum keys per page
+      MaxKeys: 1000, // Maximum keys per API request/page (not a total limit)
+      // Note: We use pagination below to fetch ALL albums, regardless of total count
     };
 
     const folderMappings = {};
     
-    // Handle pagination - fetch all pages (same as /albums endpoint)
+    // Handle pagination - fetch ALL pages until all albums are retrieved
+    // This loop continues until AWS S3 returns IsTruncated: false
+    // Example: 1500 albums = 2 requests (1000 + 500), 2500 albums = 3 requests (1000 + 1000 + 500)
     let continuationToken = undefined;
     let allContents = [];
     
@@ -179,6 +187,8 @@ const getFolderMappings = async () => {
         allContents = allContents.concat(data.Contents);
       }
       
+      // If there are more results, AWS provides NextContinuationToken
+      // We continue looping until IsTruncated is false (no more pages)
       continuationToken = data.IsTruncated ? data.NextContinuationToken : undefined;
       console.log(`📦 [FOLDER-MAPPINGS] Fetched ${allContents.length} objects so far...`);
     } while (continuationToken);
